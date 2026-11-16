@@ -12,48 +12,73 @@ import frc.robot.subsystems.elevadorSub;
 import frc.robot.subsystems.intakeSub;
 import frc.robot.subsystems.manipuladorSub;
 
-/**
- * Registra os comandos nomeados usados pelos autônomos do PathPlanner.
- * Reaproveita exatamente o que os botões já fazem:
- * A = intake.coletarAlgae() + intake.transferirAlgae()
- * B = manipulador.arremessarAlgae(intake)
- */
 public final class autonomoCMD {
 
     private autonomoCMD() {
     }
 
+    public static void registrar1(
+            intakeSub intake,
+            elevadorSub elevador,
+            manipuladorSub manipulador) {
+
+        // Requisitos dos subsistemas
+        Set<Subsystem> requisitos =
+                Set.of(intake, elevador, manipulador);
+
+        // Coleta uma Alga
+        NamedCommands.registerCommand(
+                "ColetarAlga",
+                Commands.defer(
+                        () -> coletar(intake),
+                        requisitos));
+
+        // Pontuação na NET
+        NamedCommands.registerCommand(
+                "PontuarNet",
+                Commands.defer(
+                        () -> arremessar(intake, manipulador),
+                        Set.of(intake, manipulador)));
+
+        // Pontuação no PROCESSOR
+        NamedCommands.registerCommand(
+                "PontuarProcessor",
+                Commands.defer(
+                        () -> arremessar(intake, manipulador),
+                        Set.of(intake, manipulador)));
+    }
+
+    private static Command coletar(intakeSub intake) {
+
+        return Commands.sequence(
+
+                Commands.runOnce(
+                        () -> intake.definirPosicaoalgae(
+                                intakeSub.posicaoalgae.FORA),
+                        intake),
+
+                intake.coletarAlgae(),
+
+                intake.transferirAlgae()
+
+        ).withTimeout(5.0);
+    }
+
+    private static Command arremessar(
+            intakeSub intake,
+            manipuladorSub manipulador) {
+
+        return manipulador
+                .arremessarAlgae1(intake)
+                .withTimeout(10.0);
+    }
+
+    // Compatibilidade com chamadas que utilizam registrar()
     public static void registrar(
             intakeSub intake,
             elevadorSub elevador,
             manipuladorSub manipulador) {
-        Set<Subsystem> req = Set.of(intake, elevador, manipulador);
 
-        // defer = cria um comando novo a cada uso (o mesmo nome aparece várias vezes no
-        // auto)
-        NamedCommands.registerCommand("ColetarAlga",
-                Commands.defer(() -> coletar(intake), req));
-
-        NamedCommands.registerCommand("PontuarNet",
-                Commands.defer(() -> arremessar(intake, manipulador), req));
-
-        // Por enquanto igual ao NET; se o processor precisar de outro movimento,
-        // é aqui que ele muda.
-        NamedCommands.registerCommand("PontuarProcessor",
-                Commands.defer(() -> arremessar(intake, manipulador), req));
-    }
-
-    private static Command coletar(intakeSub intake) {
-        return Commands.sequence(
-                // Mesmo efeito do botão Y: libera o intake para uma nova coleta
-                Commands.runOnce(
-                        () -> intake.definirPosicaoalgae(intakeSub.posicaoalgae.FORA),
-                        intake),
-                intake.coletarAlgae(),
-                intake.transferirAlgae()).withTimeout(5.0);
-    }
-
-    private static Command arremessar(intakeSub intake, manipuladorSub manipulador) {
-        return manipulador.arremessarAlgae(intake).withTimeout(10.0);
+        registrar1(intake, elevador, manipulador);
     }
 }

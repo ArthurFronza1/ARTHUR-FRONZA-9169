@@ -8,6 +8,7 @@ import frc.robot.Constants;
 import frc.robot.subsystems.elevadorSub;
 import frc.robot.subsystems.manipuladorSub;
     
+@SuppressWarnings("unused")
 public class AutomacaoAlgaeCMD extends SequentialCommandGroup {
 
     public AutomacaoAlgaeCMD(

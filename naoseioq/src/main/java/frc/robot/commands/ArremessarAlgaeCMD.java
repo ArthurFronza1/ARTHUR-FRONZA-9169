@@ -20,7 +20,7 @@ public class ArremessarAlgaeCMD extends SequentialCommandGroup {
                 elevador,
                 manipulador,
                 Constants.Elevador.ALTURA_LANCAMENTO,
-                Constants.Manipulador.ANGULO_LANCAMENTO);
+                Constants.Manipulador.ANGULO_LANCAMENTO); 
     }
 
     // Arremesso com altura/ângulo próprios (NET e PROCESSOR podem ser diferentes)

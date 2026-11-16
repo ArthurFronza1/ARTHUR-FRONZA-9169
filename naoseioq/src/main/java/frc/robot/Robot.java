@@ -4,23 +4,32 @@
 
 package frc.robot;
 
-import com.pathplanner.lib.commands.PathfindingCommand;
-
-import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
-public class Robot extends TimedRobot {
+import org.littletonrobotics.junction.LoggedRobot;
+import org.littletonrobotics.junction.networktables.NT4Publisher;
+import org.littletonrobotics.junction.wpilog.WPILOGWriter;
+import org.littletonrobotics.junction.Logger;
+
+public class Robot extends LoggedRobot {
   private Command m_autonomousCommand;
 
   private final RobotContainer m_robotContainer;
 
   public Robot() {
-    // Cria o RobotContainer (bindings, seletor de autônomo, AutoBuilder)
     m_robotContainer = new RobotContainer();
 
-    // Aquece o pathfinder do PathPlanner, para o primeiro uso do LB não travar
-    PathfindingCommand.warmupCommand().schedule();
+    if (isReal()) {
+        Logger.addDataReceiver(new WPILOGWriter("/home/lvuser/logs"));
+        Logger.addDataReceiver(new NT4Publisher());
+    } else {
+        // SIMULAÇÃO
+        Logger.addDataReceiver(new WPILOGWriter("logs"));
+        Logger.addDataReceiver(new NT4Publisher());
+    }
+
+    Logger.start();
   }
 
   @Override
@@ -29,12 +38,13 @@ public class Robot extends TimedRobot {
   }
 
   @Override
-  public void disabledInit() {
-  }
+  public void disabledInit() {}
 
   @Override
-  public void disabledPeriodic() {
-  }
+  public void disabledPeriodic() {}
+
+  @Override
+  public void disabledExit() {}
 
   @Override
   public void autonomousInit() {
@@ -46,20 +56,23 @@ public class Robot extends TimedRobot {
   }
 
   @Override
-  public void autonomousPeriodic() {
-  }
+  public void autonomousPeriodic() {}
+
+  @Override
+  public void autonomousExit() {}
 
   @Override
   public void teleopInit() {
-    // Cancela o autônomo ao entrar no teleop
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
   }
 
   @Override
-  public void teleopPeriodic() {
-  }
+  public void teleopPeriodic() {}
+
+  @Override
+  public void teleopExit() {}
 
   @Override
   public void testInit() {
@@ -67,14 +80,8 @@ public class Robot extends TimedRobot {
   }
 
   @Override
-  public void testPeriodic() {
-  }
+  public void testPeriodic() {}
 
   @Override
-  public void simulationInit() {
-  }
-
-  @Override
-  public void simulationPeriodic() {
-  }
+  public void testExit() {}
 }
