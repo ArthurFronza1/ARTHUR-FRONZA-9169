@@ -1,0 +1,169 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "parallel",
+          "data": {
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "1ofc"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "coleta"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "sequential",
+          "data": {
+            "commands": [
+              {
+                "type": "named",
+                "data": {
+                  "name": "transfere alga"
+                }
+              },
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "2ofc"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Cospe Alga"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "resetar hand"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "parallel",
+          "data": {
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "3 final"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "coleta"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "sequential",
+          "data": {
+            "commands": [
+              {
+                "type": "named",
+                "data": {
+                  "name": "transfere alga"
+                }
+              },
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "4"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Cospe Alga"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "resetar hand"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "parallel",
+          "data": {
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "5"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "coleta"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "sequential",
+          "data": {
+            "commands": [
+              {
+                "type": "named",
+                "data": {
+                  "name": "transfere alga"
+                }
+              },
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "6"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Cospe Alga"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "resetar hand"
+                }
+              },
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "7"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}

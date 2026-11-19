@@ -143,16 +143,16 @@ public class SimIntake extends SubsystemBase {
 
     public Command CMDintakeOn() {
         return Commands.sequence(
-                Commands.runOnce(() -> setPosition(20, 3)),     // Avança o Intake.
-                Commands.waitUntil(() -> getRealPosition() > 15),           // Aguarda o mecanismo avançar.
-                Commands.runOnce(() -> setVelocity(-3)));                   // Liga o rolete.
+                Commands.runOnce(() -> setPosition(20, 3)), // Avança o Intake.
+                Commands.waitUntil(() -> getRealPosition() > 15), // Aguarda o mecanismo avançar.
+                Commands.runOnce(() -> setVelocity(-3))); // Liga o rolete.
     }
 
     public Command CMDintakeOff() {
         return Commands.sequence(
-                Commands.runOnce(() -> setPosition(0, 3)),  // Recolhe o Intake.
-                Commands.waitUntil(() -> getRealPosition() <= 15),      // Aguarda o mecanismo recolher.
-                Commands.runOnce(() -> setVelocity(0)));       // Desliga o rolete.
+                Commands.runOnce(() -> setPosition(0, 3)), // Recolhe o Intake.
+                Commands.waitUntil(() -> getRealPosition() <= 15), // Aguarda o mecanismo recolher.
+                Commands.runOnce(() -> setVelocity(0))); // Desliga o rolete.
     }
 
     // =========================================================

@@ -29,8 +29,7 @@ public class intakeSub extends SubsystemBase {
     private static final double TOLERANCIA = Units.degreesToRadians(2.0);
     private static final double PERIOD = 0.02;
 
-    private static final Translation3d PIVO =
-            new Translation3d(0.30, 0.0, 0.25);
+    private static final Translation3d PIVO = new Translation3d(0.30, 0.0, 0.25);
 
     private posicaoalgae posicaoAlgae = posicaoalgae.FORA;
 
@@ -41,10 +40,9 @@ public class intakeSub extends SubsystemBase {
 
     private BooleanSupplier coletor = () -> false;
 
-    private final StructArrayPublisher<Pose3d> componentePub =
-            NetworkTableInstance.getDefault()
-                    .getStructArrayTopic("Intake/Pose3d", Pose3d.struct)
-                    .publish();
+    private final StructArrayPublisher<Pose3d> componentePub = NetworkTableInstance.getDefault()
+            .getStructArrayTopic("Intake/Pose3d", Pose3d.struct)
+            .publish();
 
     public intakeSub() {
     }
@@ -123,8 +121,7 @@ public class intakeSub extends SubsystemBase {
                 Commands.runOnce(this::fechar, this),
 
                 // Aguarda o movimento de fechamento
-                Commands.waitUntil(this::noAlvo).withTimeout(2.0)
-        );
+                Commands.waitUntil(this::noAlvo).withTimeout(2.0));
     }
 
     public Command transferirAlgae() {
@@ -133,8 +130,8 @@ public class intakeSub extends SubsystemBase {
 
                 Commands.runOnce(
                         () -> definirPosicaoalgae(posicaoalgae.MANIPULADOR),
-                        this)
-        ).onlyIf(this::temAlgaeNoCentro);
+                        this))
+                .onlyIf(this::temAlgaeNoCentro);
     }
 
     @SuppressWarnings("unused")
@@ -151,7 +148,7 @@ public class intakeSub extends SubsystemBase {
                 PIVO,
                 new Rotation3d(0.0, anguloAtual, 0.0));
 
-       componentePub.set(new Pose3d[] { new Pose3d() });
+        componentePub.set(new Pose3d[] { new Pose3d() });
 
         SmartDashboard.putString(
                 "Intake/PosicaoAlgae",

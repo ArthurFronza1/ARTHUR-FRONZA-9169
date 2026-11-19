@@ -10,8 +10,8 @@ import frc.robot.subsystems.manipuladorSub;
 
 public class TransferirCMD extends SequentialCommandGroup {
 
-        public TransferirCMD(intakeSub intake, elevadorSub elevador, manipuladorSub manipulador) {
-            //TODO Auto-generated constructor stub
-        }
+    public TransferirCMD(intakeSub intake, elevadorSub elevador, manipuladorSub manipulador) {
+        // TODO Auto-generated constructor stub
+    }
 
 }

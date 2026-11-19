@@ -22,10 +22,9 @@ public class GamePieceSim {
 
     private final List<Translation2d> gamePieces = new ArrayList<>();
 
-    private final StructArrayPublisher<Pose3d> gamePiecesPublisher =
-            NetworkTableInstance.getDefault()
-                    .getStructArrayTopic("GamePieces/Poses", Pose3d.struct)
-                    .publish();
+    private final StructArrayPublisher<Pose3d> gamePiecesPublisher = NetworkTableInstance.getDefault()
+            .getStructArrayTopic("GamePieces/Poses", Pose3d.struct)
+            .publish();
 
     public GamePieceSim(Supplier<Pose2d> getRobotPose, intakeSub intake) {
         this.getRobotPose = getRobotPose;

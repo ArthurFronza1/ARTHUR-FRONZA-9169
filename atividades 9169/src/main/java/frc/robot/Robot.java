@@ -21,12 +21,12 @@ public class Robot extends LoggedRobot {
     m_robotContainer = new RobotContainer();
 
     if (isReal()) {
-        Logger.addDataReceiver(new WPILOGWriter("/home/lvuser/logs"));
-        Logger.addDataReceiver(new NT4Publisher());
+      Logger.addDataReceiver(new WPILOGWriter("/home/lvuser/logs"));
+      Logger.addDataReceiver(new NT4Publisher());
     } else {
-        // SIMULAÇÃO
-        Logger.addDataReceiver(new WPILOGWriter("logs"));
-        Logger.addDataReceiver(new NT4Publisher());
+      // SIMULAÇÃO
+      Logger.addDataReceiver(new WPILOGWriter("logs"));
+      Logger.addDataReceiver(new NT4Publisher());
     }
 
     Logger.start();
@@ -38,28 +38,45 @@ public class Robot extends LoggedRobot {
   }
 
   @Override
-  public void disabledInit() {}
+  public void disabledInit() {
+  }
 
   @Override
-  public void disabledPeriodic() {}
+  public void disabledPeriodic() {
+  }
 
   @Override
-  public void disabledExit() {}
+  public void disabledExit() {
+  }
 
   @Override
   public void autonomousInit() {
+
+    System.out.println("===== AUTONOMOUS INICIADO =====");
+
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
+    System.out.println("Comando selecionado: " + m_autonomousCommand);
+
     if (m_autonomousCommand != null) {
+
+      System.out.println("Agendando comando autonomo...");
+
       CommandScheduler.getInstance().schedule(m_autonomousCommand);
+
+    } else {
+
+      System.out.println("ERRO: Nenhum comando autonomo selecionado!");
     }
   }
 
   @Override
-  public void autonomousPeriodic() {}
+  public void autonomousPeriodic() {
+  }
 
   @Override
-  public void autonomousExit() {}
+  public void autonomousExit() {
+  }
 
   @Override
   public void teleopInit() {
@@ -69,10 +86,12 @@ public class Robot extends LoggedRobot {
   }
 
   @Override
-  public void teleopPeriodic() {}
+  public void teleopPeriodic() {
+  }
 
   @Override
-  public void teleopExit() {}
+  public void teleopExit() {
+  }
 
   @Override
   public void testInit() {
@@ -80,8 +99,10 @@ public class Robot extends LoggedRobot {
   }
 
   @Override
-  public void testPeriodic() {}
+  public void testPeriodic() {
+  }
 
   @Override
-  public void testExit() {}
+  public void testExit() {
+  }
 }

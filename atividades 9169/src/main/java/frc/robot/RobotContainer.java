@@ -1,13 +1,16 @@
-// Copyright (c) FIRST and other WPILib contributors.
-// Open Source Software; you can modify and/or share it under the terms of
-// the WPILib BSD license file in the root directory of this project.
 
 package frc.robot;
 
 import java.util.function.BooleanSupplier;
 
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
+import com.pathplanner.lib.commands.PathPlannerAuto;
+import com.pathplanner.lib.path.PathPlannerPath;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -15,147 +18,257 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+
 import frc.robot.subsystems.SimElevator;
 import frc.robot.subsystems.SimHand;
 import frc.robot.subsystems.SimIntake;
 
 public class RobotContainer {
 
-  private final TankSubsystem tank = new TankSubsystem();
+        private final TankSubsystem tank = new TankSubsystem();
 
-  private final CommandXboxController driver = new CommandXboxController(0);
-  private final XboxController driverget = new XboxController(0);
+        private final CommandXboxController driver = new CommandXboxController(0);
 
-  private SimIntake mSimIntake = new SimIntake(20, 1.5, 3);
-  private SimElevator mSimElevator = new SimElevator(400, 1.5);
-  private SimHand mSimHand = new SimHand(-180, 180, 1.5, 3);
+        private final XboxController driverget = new XboxController(0);
 
-  private final SendableChooser<Command> autoChooser = new SendableChooser<>();
+        private final SimIntake mSimIntake = new SimIntake(20, 1.5, 3);
 
-  public RobotContainer() {
+        private final SimElevator mSimElevator = new SimElevator(400, 1.5);
 
-    autoChooser.setDefaultOption("Nenhum", Commands.none());
-    autoChooser.addOption("Quadrado", Autos.quadrado(tank));
-    autoChooser.addOption("Reto", Autos.reto(tank));
-    autoChooser.addOption("autoZigZag", Autos.autoZigZag(tank));
-    // autoChooser.addOption("Algae_3", Autos.Algae_3(tank));
+        private final SimHand mSimHand = new SimHand(-180, 180, 1.5, 3);
 
-    SmartDashboard.putData("Auto Selector", autoChooser);
+        private final SendableChooser<Command> autoChooser = new SendableChooser<>();
 
-    configureBindings();
+        public RobotContainer() {
 
-    tank.setDefaultCommand(tank.run(() -> {
+                // =========================================
+                // AUTONÔMICO
+                // =========================================
 
-      double leftX = driver.getLeftX();
-      double leftY = driver.getLeftY();
+                NamedCommands.registerCommand("coleta", Autos.coletarAlgae(tank, mSimIntake, mSimElevator, mSimHand));
+                NamedCommands.registerCommand("Cospe Alga",Autos.depositGamePiece(tank, mSimHand));
+                NamedCommands.registerCommand("transfere alga",Autos.transferirParaHand(tank, mSimElevator,mSimHand));
+                NamedCommands.registerCommand("resetar hand",Autos.resetangleCommand(tank, mSimElevator,mSimHand));
+                autoChooser.addOption(
+                                "Uma Algae",
+                                Autos.autoUmaAlgae(
+                                                tank,
+                                                mSimIntake,
+                                                mSimElevator,
+                                                mSimHand));
+                autoChooser.addOption(
+                                "Quadrado",
+                                Autos.quadrado(tank));
 
-      double joystickMagnitude = Math.hypot(leftX, leftY);
+                autoChooser.addOption(
+                                "Reto",
+                                Autos.reto(tank));
 
-      // Joystick esquerdo sendo utilizado
-      if (joystickMagnitude > 0.08) {
+                autoChooser.addOption(
+                                "ZigZag",
+                                Autos.autoZigZag(
+                                                tank,
+                                                mSimIntake,
+                                                mSimElevator,
+                                                mSimHand));
 
-        tank.driveWithAngleControl(getLeftJoystickAngle(), driver.getRawAxis(3));
+                autoChooser.addOption("Rota teste", new PathPlannerAuto("New Auto"));
 
-        // Tank normal
-      } else {
+                SmartDashboard.putData(
+                                "Auto Selector",
+                                autoChooser);
 
-        double forward = driver.getRawAxis(3);
-        double backward = driver.getRawAxis(2);
-        double rotation = driver.getRightX();
+                // =========================================
+                // CONTROLES
+                // =========================================
 
-        tank.drive(forward, -backward, -rotation);
-      }
-    }));
-  }
+                configureBindings();
 
-  private void configureBindings() {
+                // =========================================
+                // DRIVE DEFAULT
+                // =========================================
 
-    driver.start().onTrue(tank.runOnce(() -> tank.resetPose(new Pose2d(2.0, 4.0, new Rotation2d()))));
+                tank.setDefaultCommand(
+                                tank.run(() -> {
 
-    driver.povUp().onTrue(mSimElevator.CMDsetPosition(400, 10));
-    driver.povDown().onTrue(mSimElevator.CMDsetPosition(0, 3));
+                                        double leftX = driver.getLeftX();
+                                        double leftY = driver.getLeftY();
 
-    driver.povLeft().onTrue(Commands.runOnce(() -> mSimHand.setAngle(-45, 3)));
-    driver.povRight().onTrue(Commands.runOnce(() -> mSimHand.setAngle(45, 3)));
-    driver.a().onTrue(Commands.runOnce(() -> mSimHand.setAngle(135, 3)));
-    driver.b().onTrue(Commands.runOnce(() -> mSimHand.setAngle(-135, 3)));
+                                        double joystickMagnitude = Math.hypot(leftX, leftY);
 
-    driver.back().onTrue(Commands.runOnce(() -> mSimHand.setAngle(0, 3)));
+                                        if (joystickMagnitude > 0.08) {
 
-    /*
-     * Positivo = Depositar
-     * Negativo = Coletar
-     */
-    coletar_Ground();
-    autoHand();
-    // deposit_Pose();
+                                                tank.driveWithAngleControl(
+                                                                getLeftJoystickAngle(),
+                                                                driver.getRawAxis(3));
 
-    driver.y().onTrue(deposit());
+                                        } else {
 
-  }
+                                                double forward = driver.getRawAxis(3);
 
-  void coletar_Ground() {
-    driver.leftBumper().whileTrue(
-        mSimIntake.CMDintakeOn().onlyIf(() -> !tank.isFuelInsideRobot() && SimElevator.getRealPosition() >= 200));
-    driver.leftBumper().whileFalse(mSimIntake.CMDintakeOff());
-  }
+                                                double backward = driver.getRawAxis(2);
 
-  void autoHand() {
+                                                double rotation = driver.getRightX();
 
-    BooleanSupplier autoHandOk = () -> tank.isFuelInsideRobot() && !tank.isHandCollected();
+                                                tank.drive(
+                                                                forward,
+                                                                -backward,
+                                                                -rotation);
+                                        }
+                                }));
+        }
 
-    onCommandCondition(autoHandOk, Commands.sequence(
-        mSimElevator.CMDsetPosition(400, 3),
-        Commands.waitUntil(() -> SimElevator.getRealPosition() > 390),
-        mSimHand.CMDsetAngle(0, 3),
-        Commands.waitUntil(() -> Math.abs(SimHand.getRealAngle()) < 5),
-        mSimElevator.CMDsetPosition(0, 3),
-        mSimHand.CMDsetVelocity(-1),
-        Commands.waitSeconds(1),
-        mSimHand.CMDsetVelocity(0)));
+        // =========================================
+        // CONFIGURAÇÃO DOS BOTÕES
+        // =========================================
 
-  }
+        private void configureBindings() {
 
-  public Command getAutonomousCommand() {
-    return autoChooser.getSelected();
-  }
+                // Reset manual da pose
+                driver.start().onTrue(
+                                tank.runOnce(() -> tank.resetPose(
+                                                new Pose2d(
+                                                                2.0,
+                                                                4.0,
+                                                                new Rotation2d()))));
 
-  public double getLeftJoystickAngle() {
+                // Elevador
+                driver.povUp().onTrue(
+                                mSimElevator.CMDsetPosition(400, 10));
 
-    double x = -driverget.getLeftX();
-    double y = -driverget.getLeftY();
+                driver.povDown().onTrue(
+                                mSimElevator.CMDsetPosition(0, 3));
 
-    if (Math.hypot(x, y) < 0.1) {
-      return 0.0;
-    }
+                // Ângulo do Hand
+                driver.povLeft().onTrue(
+                                Commands.runOnce(
+                                                () -> mSimHand.setAngle(-45, 3)));
 
-    return Math.toDegrees(Math.atan2(x, y));
-  }
+                driver.povRight().onTrue(
+                                Commands.runOnce(
+                                                () -> mSimHand.setAngle(45, 3)));
 
-  /**
-   * Ativa o comando alvo, quando a condição é verdadeira.
-   * 
-   * @param null
-   */
-  private void onCommandCondition(BooleanSupplier condition, Command command) {
-    new Trigger(condition).onTrue(command);
-  }
+                driver.a().onTrue(
+                                Commands.runOnce(
+                                                () -> mSimHand.setAngle(135, 3)));
 
-  /**
-   * Matém um comando ativo, enquanto a condição é verdade.
-   * 
-   * @param null
-   */
-  private void whileCommandCondition(BooleanSupplier condition, Command command) {
-    new Trigger(condition).whileTrue(command);
-  }
+                driver.b().onTrue(
+                                Commands.runOnce(
+                                                () -> mSimHand.setAngle(-135, 3)));
 
-  Command deposit() {
-    return Commands.sequence(
-        Commands.runOnce(() -> mSimHand.setVelocity(1)),
-        tank.depositFuelCommand(),
-        Commands.waitSeconds(1),
-        Commands.runOnce(() -> mSimHand.setVelocity(0)));
-  }
+                driver.back().onTrue(
+                                Commands.runOnce(
+                                                () -> mSimHand.setAngle(0, 3)));
 
+                // Coleta manual
+                coletar_Ground();
+
+                // Transferência automática no teleoperado
+                autoHand();
+
+                // Depositar
+                driver.y().onTrue(deposit());
+        }
+
+        // =========================================
+        // INTAKE MANUAL                        
+        // =========================================
+
+        private void coletar_Ground() {
+
+                driver.leftBumper().whileTrue(
+                                mSimIntake.CMDintakeOn()
+                                                .onlyIf(() -> !tank.isFuelInsideRobot()
+                                                                && SimElevator.getRealPosition() >= 200));
+
+                driver.leftBumper().whileFalse(
+                                mSimIntake.CMDintakeOff());
+        }
+
+        // =========================================
+        // TRANSFERÊNCIA AUTOMÁTICA
+        // =========================================
+
+        private void autoHand() {
+
+                BooleanSupplier autoHandOk = () -> !DriverStation.isAutonomous()
+                                && tank.isFuelInsideRobot()
+                                && !tank.isHandCollected();
+
+                onCommandCondition(
+                                autoHandOk,
+                                Autos.transferirParaHand(
+                                                tank,
+                                                mSimElevator,
+                                                mSimHand));
+        }
+
+        // =========================================
+        // COMANDO AUTÔNOMO SELECIONADO
+        // =========================================
+
+        public Command getAutonomousCommand() {
+
+                System.out.println(">>> AUTONOMO UMA ALGAE SELECIONADO!");
+
+                return autoChooser.getSelected();
+                /*Autos.autoUmaAlgae(
+                                tank,
+                                mSimIntake,
+                                mSimElevator,
+                                mSimHand);*/
+        }
+        // =========================================
+        // ÂNGULO DO JOYSTICK
+        // =========================================
+
+        public double getLeftJoystickAngle() {
+
+                double x = -driverget.getLeftX();
+                double y = -driverget.getLeftY();
+
+                if (Math.hypot(x, y) < 0.1) {
+                        return 0.0;
+                }
+
+                return Math.toDegrees(
+                                Math.atan2(x, y));
+        }
+
+        // =========================================
+        // CONDIÇÕES DE COMANDOS
+        // =========================================
+
+        private void onCommandCondition(
+                        BooleanSupplier condition,
+                        Command command) {
+
+                new Trigger(condition).onTrue(command);
+        }
+
+        private void whileCommandCondition(
+                        BooleanSupplier condition,
+                        Command command) {
+
+                new Trigger(condition).whileTrue(command);
+        }
+
+        // =========================================
+        // DEPOSITAR MANUALMENTE
+        // =========================================
+
+        private Command deposit() {
+
+                return Commands.sequence(
+
+                                Commands.runOnce(
+                                                () -> mSimHand.setVelocity(1)),
+
+                                tank.depositFuelCommand(),
+
+                                Commands.waitSeconds(1),
+
+                                Commands.runOnce(
+                                                () -> mSimHand.setVelocity(0)));
+        }
 }

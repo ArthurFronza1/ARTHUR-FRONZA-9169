@@ -4,15 +4,21 @@ import java.util.function.DoubleSupplier;
 
 import org.littletonrobotics.junction.Logger;
 
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPLTVController;
+
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+
 import frc.robot.subsystems.FuelSimulation;
 import frc.robot.subsystems.SimIntake;
 
@@ -22,8 +28,9 @@ public class TankSubsystem extends SubsystemBase {
     // CONFIGURAÇÕES
     // =========================================================
 
-    private static final double TRACK_WIDTH = 0.60;
+    private static final double TRACK_WIDTH = 0.425;
     private static final double MAX_SPEED = 3.0;
+    private static final double PERIOD = 0.02;
 
     private static final double HEADING_KP = 0.035;
     private static final double MAX_ROTATION = 0.5;
@@ -38,6 +45,7 @@ public class TankSubsystem extends SubsystemBase {
     // =========================================================
 
     private final PIDController rotationPID = new PIDController(HEADING_KP, 0.0, 0.0);
+
     private final FuelSimulation fuelSimulation = new FuelSimulation();
 
     private double leftVelocity = 0.0;
@@ -46,7 +54,13 @@ public class TankSubsystem extends SubsystemBase {
     private double leftDistanceMeters = 0.0;
     private double rightDistanceMeters = 0.0;
 
+    private boolean pathPlannerRecebeuComando = false;
+
+    // DIAGNOSTICO (temporario): conta as chamadas impressas de driveRobotRelative
+    private int debugCalls = 0;
+
     private Rotation2d heading = new Rotation2d();
+
     private double previousTime = Timer.getFPGATimestamp();
 
     // =========================================================
@@ -59,16 +73,141 @@ public class TankSubsystem extends SubsystemBase {
             rightDistanceMeters,
             new Pose2d());
 
+    // =========================================================
+    // CONSTRUTOR
+    // =========================================================
+
     public TankSubsystem() {
+
         rotationPID.enableContinuousInput(-180.0, 180.0);
         rotationPID.setTolerance(ANGLE_TOLERANCE);
+
+        configurarAutoBuilder();
+    }
+
+    // =========================================================
+    // PATHPLANNER - CONFIGURAÇÃO
+    // =========================================================
+
+    private void configurarAutoBuilder() {
+
+        try {
+
+            RobotConfig config = RobotConfig.fromGUISettings();
+
+            AutoBuilder.configure(
+                    this::getPose,
+                    this::resetPose,
+                    this::getRobotRelativeSpeeds,
+                    (speeds, feedforwards) -> driveRobotRelative(speeds),
+                    new PPLTVController(PERIOD, MAX_SPEED),
+                    config,
+                    () -> false,
+                    this);
+
+            System.out.println(
+                    ">>> PATHPLANNER CONFIGURADO - DIFFERENTIAL DRIVE");
+
+            System.out.println(
+                    ">>> TRACK WIDTH: " + TRACK_WIDTH);
+
+            System.out.println(
+                    ">>> MAX SPEED: " + MAX_SPEED);
+
+        } catch (Exception e) {
+
+            throw new IllegalStateException(
+                    "Erro ao configurar o PathPlanner.",
+                    e);
+        }
+    }
+
+    // =========================================================
+    // PATHPLANNER - VELOCIDADES DO ROBÔ
+    // =========================================================
+
+    public ChassisSpeeds getRobotRelativeSpeeds() {
+
+        double linearVelocity = (leftVelocity + rightVelocity) / 2.0;
+
+        double angularVelocity = (rightVelocity - leftVelocity) / TRACK_WIDTH;
+
+        return new ChassisSpeeds(
+                linearVelocity,
+                0.0,
+                angularVelocity);
+    }
+
+    // =========================================================
+    // PATHPLANNER - CONTROLE DAS RODAS
+    // (VERSAO COM DIAGNOSTICO: imprime as 5 primeiras chamadas)
+    // =========================================================
+
+    public void driveRobotRelative(ChassisSpeeds speeds) {
+
+        if (debugCalls < 5) {
+
+            debugCalls++;
+
+            System.out.println(
+                    ">>> CHAMADA " + debugCalls
+                            + " | VX: " + speeds.vxMetersPerSecond
+                            + " | OMEGA: " + speeds.omegaRadiansPerSecond
+                            + " | POSE: " + getPose());
+        }
+
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber("Debug/vxCmd", speeds.vxMetersPerSecond);
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber("Debug/omegaCmd", speeds.omegaRadiansPerSecond);
+
+        pathPlannerRecebeuComando = true;
+
+        double left = speeds.vxMetersPerSecond
+                - (speeds.omegaRadiansPerSecond * TRACK_WIDTH / 2.0);
+
+        double right = speeds.vxMetersPerSecond
+                + (speeds.omegaRadiansPerSecond * TRACK_WIDTH / 2.0);
+
+        double maxMagnitude = Math.max(
+                Math.abs(left),
+                Math.abs(right));
+
+        if (maxMagnitude > MAX_SPEED) {
+
+            double scale = MAX_SPEED / maxMagnitude;
+
+            left *= scale;
+            right *= scale;
+        }
+
+        leftVelocity = left;
+        rightVelocity = right;
+
+        Logger.recordOutput(
+                "PathPlanner/CommandedVx",
+                speeds.vxMetersPerSecond);
+
+        Logger.recordOutput(
+                "PathPlanner/CommandedOmega",
+                speeds.omegaRadiansPerSecond);
+
+        Logger.recordOutput(
+                "PathPlanner/LeftOutput",
+                left);
+
+        Logger.recordOutput(
+                "PathPlanner/RightOutput",
+                right);
     }
 
     // =========================================================
     // DRIVE
     // =========================================================
 
-    public void drive(double forward, double backward, double rotation) {
+    public void drive(
+            double forward,
+            double backward,
+            double rotation) {
+
         forward = MathUtil.applyDeadband(forward, 0.08);
         backward = MathUtil.applyDeadband(backward, 0.08);
         rotation = MathUtil.applyDeadband(rotation, 0.08);
@@ -76,18 +215,25 @@ public class TankSubsystem extends SubsystemBase {
         setDrive(forward + backward, rotation);
     }
 
-    private void setDrive(double movement, double rotation) {
+    private void setDrive(
+            double movement,
+            double rotation) {
+
         double leftCommand = movement - rotation;
         double rightCommand = movement + rotation;
 
-        leftCommand = MathUtil.clamp(leftCommand, -1.0, 1.0);
-        rightCommand = MathUtil.clamp(rightCommand, -1.0, 1.0);
+        leftCommand = MathUtil.clamp(
+                leftCommand, -1.0, 1.0);
+
+        rightCommand = MathUtil.clamp(
+                rightCommand, -1.0, 1.0);
 
         leftVelocity = leftCommand * MAX_SPEED;
         rightVelocity = rightCommand * MAX_SPEED;
     }
 
     public void stop() {
+
         leftVelocity = 0.0;
         rightVelocity = 0.0;
     }
@@ -97,27 +243,45 @@ public class TankSubsystem extends SubsystemBase {
     // =========================================================
 
     public Pose2d getPose() {
+
         return odometry.getPoseMeters();
     }
 
     public void resetPose(Pose2d pose) {
+
         leftDistanceMeters = 0.0;
         rightDistanceMeters = 0.0;
 
         heading = pose.getRotation();
 
-        odometry.resetPosition(heading, leftDistanceMeters, rightDistanceMeters, pose);
+        pathPlannerRecebeuComando = false;
+
+        // DIAGNOSTICO: permite imprimir as chamadas de novo a cada autonomo
+        debugCalls = 0;
+
+        rotationPID.reset();
+
+        odometry.resetPosition(
+                heading,
+                leftDistanceMeters,
+                rightDistanceMeters,
+                pose);
     }
 
-    public Command CMDresetPose(Pose2d pose){
-        return Commands.runOnce(() -> resetPose(pose));
+    public Command CMDresetPose(Pose2d pose) {
+
+        return Commands.runOnce(
+                () -> resetPose(pose));
     }
 
     // =========================================================
     // CÁLCULOS DE POSIÇÃO
     // =========================================================
 
-    private double getDistanceToPoint(double targetX, double targetY) {
+    private double getDistanceToPoint(
+            double targetX,
+            double targetY) {
+
         Pose2d currentPose = getPose();
 
         double deltaX = targetX - currentPose.getX();
@@ -126,19 +290,27 @@ public class TankSubsystem extends SubsystemBase {
         return Math.hypot(deltaX, deltaY);
     }
 
-    private double getAngleToPoint(double targetX, double targetY) {
+    private double getAngleToPoint(
+            double targetX,
+            double targetY) {
+
         Pose2d currentPose = getPose();
 
         double deltaX = targetX - currentPose.getX();
         double deltaY = targetY - currentPose.getY();
 
-        return Math.toDegrees(Math.atan2(deltaY, deltaX));
+        return Math.toDegrees(
+                Math.atan2(deltaY, deltaX));
     }
 
     private double getAngleError(double targetAngle) {
+
         double currentAngle = getPose().getRotation().getDegrees();
 
-        return MathUtil.inputModulus(targetAngle - currentAngle, -180.0, 180.0);
+        return MathUtil.inputModulus(
+                targetAngle - currentAngle,
+                -180.0,
+                180.0);
     }
 
     // =========================================================
@@ -146,11 +318,15 @@ public class TankSubsystem extends SubsystemBase {
     // =========================================================
 
     public double getRotationToAngle(double targetAngle) {
+
         double currentAngle = getPose().getRotation().getDegrees();
 
         double output = rotationPID.calculate(currentAngle, targetAngle);
 
-        output = MathUtil.clamp(output, -MAX_ROTATION, MAX_ROTATION);
+        output = MathUtil.clamp(
+                output,
+                -MAX_ROTATION,
+                MAX_ROTATION);
 
         Logger.recordOutput("Heading/Target", targetAngle);
         Logger.recordOutput("Heading/Current", currentAngle);
@@ -164,7 +340,10 @@ public class TankSubsystem extends SubsystemBase {
     // DRIVE ORIENTADO À ARENA
     // =========================================================
 
-    public Command driveWithAngle(DoubleSupplier angleSupplier, DoubleSupplier throttleSupplier) {
+    public Command driveWithAngle(
+            DoubleSupplier angleSupplier,
+            DoubleSupplier throttleSupplier) {
+
         return run(() -> {
 
             double targetAngle = angleSupplier.getAsDouble();
@@ -172,14 +351,19 @@ public class TankSubsystem extends SubsystemBase {
 
             double currentAngle = getPose().getRotation().getDegrees();
 
-            double angleError = MathUtil.inputModulus(targetAngle - currentAngle, -180.0, 180.0);
+            double angleError = MathUtil.inputModulus(
+                    targetAngle - currentAngle,
+                    -180.0,
+                    180.0);
 
-            // Se o alvo estiver "atrás" do robô,
-            // mantém a orientação mais próxima e inverte a tração.
             if (Math.abs(angleError) > 90.0) {
+
                 throttle *= -1.0;
 
-                targetAngle = MathUtil.inputModulus(targetAngle + 180.0, -180.0, 180.0);
+                targetAngle = MathUtil.inputModulus(
+                        targetAngle + 180.0,
+                        -180.0,
+                        180.0);
             }
 
             double rotation = getRotationToAngle(targetAngle);
@@ -187,23 +371,31 @@ public class TankSubsystem extends SubsystemBase {
             setDrive(throttle, rotation);
 
         }).finallyDo(() -> {
+
             stop();
             rotationPID.reset();
         });
     }
 
-    public void driveWithAngleControl(double targetAngle, double throttle) {
+    public void driveWithAngleControl(
+            double targetAngle,
+            double throttle) {
 
         double currentAngle = getPose().getRotation().getDegrees();
 
-        double angleError = MathUtil.inputModulus(targetAngle - currentAngle, -180.0, 180.0);
+        double angleError = MathUtil.inputModulus(
+                targetAngle - currentAngle,
+                -180.0,
+                180.0);
 
-        // Se for mais eficiente andar de ré, inverte automaticamente.
         if (Math.abs(angleError) > 90.0) {
 
             throttle *= -1.0;
 
-            targetAngle = MathUtil.inputModulus(targetAngle + 180.0, -180.0, 180.0);
+            targetAngle = MathUtil.inputModulus(
+                    targetAngle + 180.0,
+                    -180.0,
+                    180.0);
         }
 
         double rotation = getRotationToAngle(targetAngle);
@@ -216,7 +408,9 @@ public class TankSubsystem extends SubsystemBase {
     // =========================================================
 
     public Command turnToAngle(double targetAngle) {
+
         return run(() -> {
+
             double rotation = getRotationToAngle(targetAngle);
 
             setDrive(0.0, rotation);
@@ -224,6 +418,7 @@ public class TankSubsystem extends SubsystemBase {
         }).until(() -> Math.abs(getAngleError(targetAngle)) < ANGLE_TOLERANCE
 
         ).finallyDo(() -> {
+
             stop();
             rotationPID.reset();
         });
@@ -233,19 +428,26 @@ public class TankSubsystem extends SubsystemBase {
     // TURN TO POINT
     // =========================================================
 
-    public Command turnToPoint(double targetX, double targetY) {
+    public Command turnToPoint(
+            double targetX,
+            double targetY) {
+
         return run(() -> {
+
             double targetAngle = getAngleToPoint(targetX, targetY);
+
             double rotation = getRotationToAngle(targetAngle);
 
             setDrive(0.0, rotation);
 
         }).until(() -> {
+
             double targetAngle = getAngleToPoint(targetX, targetY);
 
             return Math.abs(getAngleError(targetAngle)) < ANGLE_TOLERANCE;
 
         }).finallyDo(() -> {
+
             stop();
             rotationPID.reset();
         });
@@ -255,20 +457,32 @@ public class TankSubsystem extends SubsystemBase {
     // DRIVE TO POINT
     // =========================================================
 
-    public Command driveToPoint(double targetX, double targetY) {
+    public Command driveToPoint(
+            double targetX,
+            double targetY) {
+
         return run(() -> {
+
             double distance = getDistanceToPoint(targetX, targetY);
+
             double targetAngle = getAngleToPoint(targetX, targetY);
 
             double angleError = getAngleError(targetAngle);
+
             boolean driveBackward = Math.abs(angleError) > 90.0;
 
-            // Usa a traseira do robô quando for o caminho mais curto.
             if (driveBackward) {
-                targetAngle = MathUtil.inputModulus(targetAngle + 180.0, -180.0, 180.0);
+
+                targetAngle = MathUtil.inputModulus(
+                        targetAngle + 180.0,
+                        -180.0,
+                        180.0);
             }
 
-            double forward = MathUtil.clamp(distance * POSITION_KP, 0.0, MAX_FORWARD);
+            double forward = MathUtil.clamp(
+                    distance * POSITION_KP,
+                    0.0,
+                    MAX_FORWARD);
 
             if (driveBackward) {
                 forward = -forward;
@@ -289,6 +503,7 @@ public class TankSubsystem extends SubsystemBase {
         }).until(() -> getDistanceToPoint(targetX, targetY) < POSITION_TOLERANCE
 
         ).finallyDo(() -> {
+
             stop();
             rotationPID.reset();
         });
@@ -298,8 +513,14 @@ public class TankSubsystem extends SubsystemBase {
     // DRIVE TO POSE
     // =========================================================
 
-    public Command driveToPose(double x, double y, double rotation) {
-        return Commands.sequence(driveToPoint(x, y), turnToAngle(rotation));
+    public Command driveToPose(
+            double x,
+            double y,
+            double rotation) {
+
+        return Commands.sequence(
+                driveToPoint(x, y),
+                turnToAngle(rotation));
     }
 
     // =========================================================
@@ -307,14 +528,18 @@ public class TankSubsystem extends SubsystemBase {
     // =========================================================
 
     public double getFieldVelocityX() {
+
         double linearVelocity = (leftVelocity + rightVelocity) / 2.0;
+
         double angle = heading.getRadians();
 
         return linearVelocity * Math.cos(angle);
     }
 
     public double getFieldVelocityY() {
+
         double linearVelocity = (leftVelocity + rightVelocity) / 2.0;
+
         double angle = heading.getRadians();
 
         return linearVelocity * Math.sin(angle);
@@ -325,18 +550,22 @@ public class TankSubsystem extends SubsystemBase {
     // =========================================================
 
     public void depositFuel() {
+
         fuelSimulation.deposit(getPose());
     }
 
     public Command depositFuelCommand() {
+
         return runOnce(this::depositFuel);
     }
 
     public boolean isHandCollected() {
+
         return fuelSimulation.isHandCollected();
     }
 
     public boolean isFuelInsideRobot() {
+
         return fuelSimulation.isFuelInsideRobot();
     }
 
@@ -346,8 +575,11 @@ public class TankSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
+
         double currentTime = Timer.getFPGATimestamp();
+
         double dt = currentTime - previousTime;
+
         previousTime = currentTime;
 
         // Simula os encoders.
@@ -356,13 +588,18 @@ public class TankSubsystem extends SubsystemBase {
 
         // Calcula velocidades do chassi.
         double linearVelocity = (leftVelocity + rightVelocity) / 2.0;
+
         double angularVelocity = (rightVelocity - leftVelocity) / TRACK_WIDTH;
 
         // Simula o giroscópio.
-        heading = heading.plus(Rotation2d.fromRadians(angularVelocity * dt));
+        heading = heading.plus(
+                Rotation2d.fromRadians(angularVelocity * dt));
 
         // Atualiza odometria.
-        Pose2d pose = odometry.update(heading, leftDistanceMeters, rightDistanceMeters);
+        Pose2d pose = odometry.update(
+                heading,
+                leftDistanceMeters,
+                rightDistanceMeters);
 
         // Atualiza as game pieces.
         fuelSimulation.update(
@@ -373,7 +610,7 @@ public class TankSubsystem extends SubsystemBase {
                 SimIntake.isRunning(),
                 dt);
 
-        // Logs.
+        // Logs de odometria.
         Logger.recordOutput("ODOMETRY", pose);
 
         Logger.recordOutput("Tank/LeftDistance", leftDistanceMeters);
@@ -386,6 +623,12 @@ public class TankSubsystem extends SubsystemBase {
         Logger.recordOutput("Tank/AngularVelocity", angularVelocity);
         Logger.recordOutput("Tank/Heading", heading.getDegrees());
 
+        // Diagnóstico PathPlanner.
+        Logger.recordOutput(
+                "PathPlanner/RecebeuComando",
+                pathPlannerRecebeuComando);
+
+        // Game pieces.
         Logger.recordOutput("GAMEPIECE", isHandCollected());
         Logger.recordOutput("GAMEPIECE robot", isFuelInsideRobot());
     }

@@ -7,33 +7,33 @@ import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import frc.robot.Constants;
 import frc.robot.subsystems.elevadorSub;
 import frc.robot.subsystems.manipuladorSub;
-    
+
 @SuppressWarnings("unused")
 public class AutomacaoAlgaeCMD extends SequentialCommandGroup {
 
-    public AutomacaoAlgaeCMD(
-            elevadorSub elevador,
-            manipuladorSub manipulador) {   
+        public AutomacaoAlgaeCMD(
+                        elevadorSub elevador,
+                        manipuladorSub manipulador) {
 
-        addCommands(
+                addCommands(
 
-                Commands.either(
+                                Commands.either(
 
-                        // Se já estiver tudo na posição de coleta
-                        Commands.none(),
+                                                // Se já estiver tudo na posição de coleta
+                                                Commands.none(),
 
-                        // Caso contrário, executa a sequência
-                        Commands.sequence(
+                                                // Caso contrário, executa a sequência
+                                                Commands.sequence(
 
-                                // Retorna o manipulador para 0 graus
-                                manipulador.irParaAngulo(0),
+                                                                // Retorna o manipulador para 0 graus
+                                                                manipulador.irParaAngulo(0),
 
-                                // Depois desce o elevador
-                                elevador.irParaAltura(
-                                        Constants.Elevador.ALTURA_COLETA)),
+                                                                // Depois desce o elevador
+                                                                elevador.irParaAltura(
+                                                                                Constants.Elevador.ALTURA_COLETA)),
 
-                        // Verifica se os dois já estão na posição
-                        () -> manipulador.estaNoZero()
-                                && elevador.estaNaColeta()));
-    }
+                                                // Verifica se os dois já estão na posição
+                                                () -> manipulador.estaNoZero()
+                                                                && elevador.estaNaColeta()));
+        }
 }

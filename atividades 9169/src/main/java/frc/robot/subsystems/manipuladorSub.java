@@ -14,124 +14,116 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.Constants;
 
 public class manipuladorSub
-        extends edu.wpi.first.wpilibj2.command.SubsystemBase {
+                extends edu.wpi.first.wpilibj2.command.SubsystemBase {
 
-    private double anguloAtual =
-            Constants.Manipulador.ANGULO_INICIAL;
+        private double anguloAtual = Constants.Manipulador.ANGULO_INICIAL;
 
-    private double setpoint =
-            Constants.Manipulador.ANGULO_INICIAL;
+        private double setpoint = Constants.Manipulador.ANGULO_INICIAL;
 
-    private final Mechanism2d mecanismo =
-            new Mechanism2d(1.0, 1.0);
+        private final Mechanism2d mecanismo = new Mechanism2d(1.0, 1.0);
 
-    private final MechanismRoot2d base =
-            mecanismo.getRoot("Base", 0.5, 0.1);
+        private final MechanismRoot2d base = mecanismo.getRoot("Base", 0.5, 0.1);
 
-    private final MechanismLigament2d braco =
-            base.append(
-                    new MechanismLigament2d(
-                            "Braco",
-                            0.5,
-                            anguloAtual,
-                            6,
-                            new Color8Bit(Color.kGreen)));
+        private final MechanismLigament2d braco = base.append(
+                        new MechanismLigament2d(
+                                        "Braco",
+                                        0.5,
+                                        anguloAtual,
+                                        6,
+                                        new Color8Bit(Color.kGreen)));
 
-    public manipuladorSub() {
+        public manipuladorSub() {
 
-        SmartDashboard.putData(
-                "Manipulador/Mecanismo",
-                mecanismo);
-    }
+                SmartDashboard.putData(
+                                "Manipulador/Mecanismo",
+                                mecanismo);
+        }
 
-    public void definirAngulo(double angulo) {
+        public void definirAngulo(double angulo) {
 
-        setpoint = MathUtil.clamp(
-                angulo,
-                Constants.Manipulador.ANGULO_MIN,
-                Constants.Manipulador.ANGULO_MAX);
-    }
+                setpoint = MathUtil.clamp(
+                                angulo,
+                                Constants.Manipulador.ANGULO_MIN,
+                                Constants.Manipulador.ANGULO_MAX);
+        }
 
-    public double getAngulo() {
-        return anguloAtual;
-    }
+        public double getAngulo() {
+                return anguloAtual;
+        }
 
-    public double getSetpoint() {
-        return setpoint;
-    }
+        public double getSetpoint() {
+                return setpoint;
+        }
 
-    public boolean estaNoSetpoint() {
+        public boolean estaNoSetpoint() {
 
-        return Math.abs(setpoint - anguloAtual)
-                <= Constants.Manipulador.TOLERANCIA;
-    }
+                return Math.abs(setpoint - anguloAtual) <= Constants.Manipulador.TOLERANCIA;
+        }
 
-    public boolean estaNoZero() {
+        public boolean estaNoZero() {
 
-        return Math.abs(anguloAtual)
-                <= Constants.Manipulador.TOLERANCIA;
-    }
+                return Math.abs(anguloAtual) <= Constants.Manipulador.TOLERANCIA;
+        }
 
-    public Command irParaAngulo(double angulo) {
+        public Command irParaAngulo(double angulo) {
 
-        return Commands.run(
-                () -> definirAngulo(angulo),
-                this)
-                .until(this::estaNoSetpoint);
-    }
+                return Commands.run(
+                                () -> definirAngulo(angulo),
+                                this)
+                                .until(this::estaNoSetpoint);
+        }
 
-    // Comando para arremessar a Alga
-    public Command arremessarAlgae1(intakeSub intake) {
+        // Comando para arremessar a Alga
+        public Command arremessarAlgae1(intakeSub intake) {
 
-        return Commands.sequence(
+                return Commands.sequence(
 
-                // Move o manipulador para a posição de lançamento
-                irParaAngulo(
-                        Constants.Manipulador.ANGULO_MAX),
+                                // Move o manipulador para a posição de lançamento
+                                irParaAngulo(
+                                                Constants.Manipulador.ANGULO_MAX),
 
-                // Atualiza o estado da Alga
-                Commands.runOnce(
-                        () -> intake.definirPosicaoalgae(
-                                intakeSub.posicaoalgae.ARREMESSADA),
-                        intake),
+                                // Atualiza o estado da Alga
+                                Commands.runOnce(
+                                                () -> intake.definirPosicaoalgae(
+                                                                intakeSub.posicaoalgae.ARREMESSADA),
+                                                intake),
 
-                Commands.waitSeconds(0.5),
+                                Commands.waitSeconds(0.5),
 
-                // Retorna à posição inicial
-                irParaAngulo(
-                        Constants.Manipulador.ANGULO_INICIAL)
+                                // Retorna à posição inicial
+                                irParaAngulo(
+                                                Constants.Manipulador.ANGULO_INICIAL)
 
-        ).onlyIf(intake::temAlgaeNoManipulador);
-    }
+                ).onlyIf(intake::temAlgaeNoManipulador);
+        }
 
-    @Override
-    public void periodic() {
+        @Override
+        public void periodic() {
 
-        double diferenca = setpoint - anguloAtual;
+                double diferenca = setpoint - anguloAtual;
 
-        double variacaoMaxima =
-                Constants.Manipulador.VELOCIDADE_MAX
-                        * Constants.Simulacao.PERIOD;
+                double variacaoMaxima = Constants.Manipulador.VELOCIDADE_MAX
+                                * Constants.Simulacao.PERIOD;
 
-        double variacao = MathUtil.clamp(
-                diferenca,
-                -variacaoMaxima,
-                variacaoMaxima);
+                double variacao = MathUtil.clamp(
+                                diferenca,
+                                -variacaoMaxima,
+                                variacaoMaxima);
 
-        anguloAtual += variacao;
+                anguloAtual += variacao;
 
-        braco.setAngle(anguloAtual);
+                braco.setAngle(anguloAtual);
 
-        SmartDashboard.putNumber(
-                "Manipulador/Angulo",
-                anguloAtual);
+                SmartDashboard.putNumber(
+                                "Manipulador/Angulo",
+                                anguloAtual);
 
-        SmartDashboard.putNumber(
-                "Manipulador/Setpoint",
-                setpoint);
+                SmartDashboard.putNumber(
+                                "Manipulador/Setpoint",
+                                setpoint);
 
-        SmartDashboard.putBoolean(
-                "Manipulador/NoZero",
-                estaNoZero());
-    }
+                SmartDashboard.putBoolean(
+                                "Manipulador/NoZero",
+                                estaNoZero());
+        }
 }

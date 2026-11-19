@@ -7,21 +7,20 @@ import frc.robot.subsystems.intakeSub;
 
 public class coletaCMD {
 
-    public static Command criarColeta(intakeSub intake) {
+        public static Command criarColeta(intakeSub intake) {
 
-        return Commands.either(
+                return Commands.either(
 
-                Commands.sequence(
-                        Commands.waitSeconds(1.0),
+                                Commands.sequence(
+                                                Commands.waitSeconds(1.0),
 
-                        Commands.runOnce(
-                                () -> intake.definirPosicaoalgae(
-                                        intakeSub.posicaoalgae.CENTRO_INTAKE),
-                                intake)),
+                                                Commands.runOnce(
+                                                                () -> intake.definirPosicaoalgae(
+                                                                                intakeSub.posicaoalgae.CENTRO_INTAKE),
+                                                                intake)),
 
-                Commands.none(),
+                                Commands.none(),
 
-                () -> intake.getPosicaoAlgae()
-                        == intakeSub.posicaoalgae.FORA);
-    }
+                                () -> intake.getPosicaoAlgae() == intakeSub.posicaoalgae.FORA);
+        }
 }

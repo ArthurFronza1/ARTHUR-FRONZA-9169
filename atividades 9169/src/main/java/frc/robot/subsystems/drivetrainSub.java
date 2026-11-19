@@ -26,217 +26,199 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class drivetrainSub extends SubsystemBase {
 
-    // Limites da simulação
-    private static final double VELOCIDADE_MAX = 2.0;
+        // Limites da simulação
+        private static final double VELOCIDADE_MAX = 2.0;
 
-    private static final double VELOCIDADE_GIRO_MAX = 3.0;
+        private static final double VELOCIDADE_GIRO_MAX = 3.0;
 
-    private static final double VELOCIDADE_GIRO_TELEOP = 0.3;
+        private static final double VELOCIDADE_GIRO_TELEOP = 0.3;
 
-    private static final double PERIOD = 0.02;
+        private static final double PERIOD = 0.02;
 
-    private static final double DEADBAND = 0.08;
+        private static final double DEADBAND = 0.08;
 
-    // Pose de destino do Desafio 2
-    public static final Pose2d POSE_DESTINO =
-            new Pose2d(
-                    7.8,
-                    4.0,
-                    Rotation2d.fromDegrees(60.0));
+        RobotConfig config;
 
-    // Restrições do PathPlanner
-    private static final PathConstraints LIMITES =
-            new PathConstraints(
-                    1.8,
-                    2.0,
-                    Units.degreesToRadians(180.0),
-                    Units.degreesToRadians(360.0));
+        // Pose de destino do Desafio 2
+        public static final Pose2d POSE_DESTINO = new Pose2d(
+                        7.8,
+                        4.0,
+                        Rotation2d.fromDegrees(60.0));
 
-    // Pose inicial
-    private Pose2d pose =
-            new Pose2d(2.0, 2.0, new Rotation2d());
+        // Restrições do PathPlanner
+        private static final PathConstraints LIMITES = new PathConstraints(
+                        1.8,
+                        2.0,
+                        Units.degreesToRadians(180.0),
+                        Units.degreesToRadians(360.0));
 
-    // Velocidades atuais
-    private double velocidadeFrente = 0.0;
+        // Pose inicial
+        private Pose2d pose = new Pose2d(2.0, 2.0, new Rotation2d());
 
-    private double velocidadeGiro = 0.0;
+        // Velocidades atuais
+        private double velocidadeFrente = 0.0;
 
-    private final Field2d field = new Field2d();
+        private double velocidadeGiro = 0.0;
 
-    // Publicação da pose no NetworkTables
-    private final StructPublisher<Pose2d> posePub =
-            NetworkTableInstance.getDefault()
-                    .getStructTopic(
-                            "Drivetrain/Pose",
-                            Pose2d.struct)
-                    .publish();
+        private final Field2d field = new Field2d();
 
-    public drivetrainSub() {
+        // Publicação da pose no NetworkTables
+        private final StructPublisher<Pose2d> posePub = NetworkTableInstance.getDefault()
+                        .getStructTopic(
+                                        "Drivetrain/Pose",
+                                        Pose2d.struct)
+                        .publish();
 
-        field.setRobotPose(pose);
+        public drivetrainSub() {
 
-        SmartDashboard.putData(
-                "Drivetrain/Field",
-                field);
+                field.setRobotPose(pose);
 
-        PathPlannerLogging.setLogActivePathCallback(
-                poses -> field.getObject("path").setPoses(poses));
+                SmartDashboard.putData(
+                                "Drivetrain/Field",
+                                field);
 
-        PathPlannerLogging.setLogTargetPoseCallback(
-                alvo -> field.getObject("alvo").setPose(alvo));
+                PathPlannerLogging.setLogActivePathCallback(
+                                poses -> field.getObject("path").setPoses(poses));
 
-        configurarAutoBuilder();
-    }
+                PathPlannerLogging.setLogTargetPoseCallback(
+                                alvo -> field.getObject("alvo").setPose(alvo));
+                try {
 
-    // Configuração do PathPlanner
-    private void configurarAutoBuilder() {
+                        config = RobotConfig.fromGUISettings();
+                } catch (Exception e) {
 
-        try {
+                        e.printStackTrace();
+                }
 
-            RobotConfig config =
-                    RobotConfig.fromGUISettings();
+                AutoBuilder.configure(
+                                        this::getPose,
+                                        this::resetPose,
+                                        this::getRobotRelativeSpeeds,
 
-            AutoBuilder.configure(
-                    this::getPose,
-                    this::resetPose,
-                    this::getRobotRelativeSpeeds,
+                                        (speeds, feedforwards) -> driveRobotRelative(speeds),
 
-                    (speeds, feedforwards) ->
-                            driveRobotRelative(speeds),
+                                        new PPLTVController(PERIOD),
 
-                    new PPLTVController(PERIOD),
+                                        config,
 
-                    config,
+                                        () -> false,
 
-                    () -> false,
-
-                    this);
-
-        } catch (Exception e) {
-
-            throw new IllegalStateException(
-                    "Erro ao carregar a configuração do robô no PathPlanner.",
-                    e);
+                                        this);
         }
-    }
 
-    // Controle manual
-    public void drive(double frente, double giro) {
+        // Controle manual
+        public void drive(double frente, double giro) {
 
-        velocidadeFrente =
-                MathUtil.applyDeadband(
-                        frente,
-                        DEADBAND) * VELOCIDADE_MAX;
+                velocidadeFrente = MathUtil.applyDeadband(
+                                frente,
+                                DEADBAND) * VELOCIDADE_MAX;
 
-        velocidadeGiro =
-                MathUtil.applyDeadband(
-                        giro,
-                        DEADBAND) * VELOCIDADE_GIRO_TELEOP;
-    }
+                velocidadeGiro = MathUtil.applyDeadband(
+                                giro,
+                                DEADBAND) * VELOCIDADE_GIRO_TELEOP;
+        }
 
-    // Retorna a pose atual
-    public Pose2d getPose() {
-        return pose;
-    }
+        // Retorna a pose atual
+        public Pose2d getPose() {
+                return pose;
+        }
 
-    // Reinicia a pose
-    public void resetPose(Pose2d novaPose) {
+        // Reinicia a pose
+        public void resetPose(Pose2d novaPose) {
 
-        pose = novaPose;
+                pose = novaPose;
 
-        field.setRobotPose(pose);
+                field.setRobotPose(pose);
 
-        posePub.set(pose);
-    }
+                posePub.set(pose);
+        }
 
-    // Velocidades relativas ao robô
-    public ChassisSpeeds getRobotRelativeSpeeds() {
+        // Velocidades relativas ao robô
+        public ChassisSpeeds getRobotRelativeSpeeds() {
 
-        return new ChassisSpeeds(
-                velocidadeFrente,
-                0.0,
-                velocidadeGiro);
-    }
+                return new ChassisSpeeds(
+                                velocidadeFrente,
+                                0.0,
+                                velocidadeGiro);
+        }
 
-    // Recebe velocidades do PathPlanner
-    public void driveRobotRelative(ChassisSpeeds speeds) {
+        // Recebe velocidades do PathPlanner
+        public void driveRobotRelative(ChassisSpeeds speeds) {
 
-        velocidadeFrente = MathUtil.clamp(
-                speeds.vxMetersPerSecond,
-                -VELOCIDADE_MAX,
-                VELOCIDADE_MAX);
+                velocidadeFrente = MathUtil.clamp(
+                                speeds.vxMetersPerSecond,
+                                -VELOCIDADE_MAX,
+                                VELOCIDADE_MAX);
 
-        velocidadeGiro = MathUtil.clamp(
-                speeds.omegaRadiansPerSecond,
-                -VELOCIDADE_GIRO_MAX,
-                VELOCIDADE_GIRO_MAX);
-    }
+                velocidadeGiro = MathUtil.clamp(
+                                speeds.omegaRadiansPerSecond,
+                                -VELOCIDADE_GIRO_MAX,
+                                VELOCIDADE_GIRO_MAX);
+        }
 
-    // Navegação até uma pose
-    public Command irParaPose(Pose2d destino) {
+        // Navegação até uma pose
+        public Command irParaPose(Pose2d destino) {
 
-        return AutoBuilder.pathfindToPose(
-                destino,
-                LIMITES,
-                0.0)
-                .andThen(
-                        girarParaAngulo(destino.getRotation()));
-    }
+                return AutoBuilder.pathfindToPose(
+                                destino,
+                                LIMITES,
+                                0.0)
+                                .andThen(
+                                                girarParaAngulo(destino.getRotation()));
+        }
 
-    // Controle de orientação
-    public Command girarParaAngulo(Rotation2d alvo) {
+        // Controle de orientação
+        public Command girarParaAngulo(Rotation2d alvo) {
 
-        @SuppressWarnings("resource")
-        PIDController pid =
-                new PIDController(4.0, 0.0, 0.0);
+                @SuppressWarnings("resource")
+                PIDController pid = new PIDController(4.0, 0.0, 0.0);
 
-        pid.enableContinuousInput(-Math.PI, Math.PI);
+                pid.enableContinuousInput(-Math.PI, Math.PI);
 
-        pid.setTolerance(Math.toRadians(1.5));
+                pid.setTolerance(Math.toRadians(1.5));
 
-        return run(() -> {
+                return run(() -> {
 
-            double saida = pid.calculate(
-                    pose.getRotation().getRadians(),
-                    alvo.getRadians());
+                        double saida = pid.calculate(
+                                        pose.getRotation().getRadians(),
+                                        alvo.getRadians());
 
-            driveRobotRelative(
-                    new ChassisSpeeds(
-                            0.0,
-                            0.0,
-                            saida));
+                        driveRobotRelative(
+                                        new ChassisSpeeds(
+                                                        0.0,
+                                                        0.0,
+                                                        saida));
 
-        })
-        .beforeStarting(pid::reset)
-        .until(pid::atSetpoint)
-        .finallyDo(interrompido ->
-                driveRobotRelative(new ChassisSpeeds()));
-    }
+                })
+                                .beforeStarting(pid::reset)
+                                .until(pid::atSetpoint)
+                                .finallyDo(interrompido -> driveRobotRelative(new ChassisSpeeds()));
+        }
 
-    // Atualização da simulação
-    @Override
-    public void periodic() {
+        // Atualização da simulação
+        @Override
+        public void periodic() {
 
-        pose = pose.exp(
-                new Twist2d(
-                        velocidadeFrente * PERIOD,
-                        0.0,
-                        velocidadeGiro * PERIOD));
+                pose = pose.exp(
+                                new Twist2d(
+                                                velocidadeFrente * PERIOD,
+                                                0.0,
+                                                velocidadeGiro * PERIOD));
 
-        field.setRobotPose(pose);
+                field.setRobotPose(pose);
 
-        posePub.set(pose);
+                posePub.set(pose);
 
-        SmartDashboard.putNumber(
-                "Drivetrain/X",
-                pose.getX());
+                SmartDashboard.putNumber(
+                                "Drivetrain/X",
+                                pose.getX());
 
-        SmartDashboard.putNumber(
-                "Drivetrain/Y",
-                pose.getY());
+                SmartDashboard.putNumber(
+                                "Drivetrain/Y",
+                                pose.getY());
 
-        SmartDashboard.putNumber(
-                "Drivetrain/Angulo",
-                pose.getRotation().getDegrees());
-    }
+                SmartDashboard.putNumber(
+                                "Drivetrain/Angulo",
+                                pose.getRotation().getDegrees());
+        }
 }
